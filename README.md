@@ -164,7 +164,7 @@ npm test                         # 단위 시험
 
 ## 만든 곳
 
-[Define404](https://define404.com) · JohnLKim
+[Define404](https://contact.define404.com) · JohnLKim
 
 지도 정보 정리, 홈페이지 수정, 상담 창구 연결은 Define404에 문의해 주세요.
 

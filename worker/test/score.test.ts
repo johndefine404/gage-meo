@@ -130,7 +130,7 @@ describe("점검 한 번 (예시 데이터)", () => {
 
   it("리포트 본문", async () => {
     const r = await runCheck({ name: "모락 베이커리", region: "서울 강남구" }, { ...deps, homepage: async () => goodHome });
-    const brand = { name: "Define404", url: "https://define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
+    const brand = { name: "Define404", url: "https://contact.define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
     const t = reportText(r, brand, { ad: true, marketing: true, unsubscribeUrl: "https://x.example/api/unsubscribe?t=abc", now: 0 });
     expect(t).toContain("고치는 방법:");
     expect(t).toContain("github.com/johndefine404/booking-meo");

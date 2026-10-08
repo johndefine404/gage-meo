@@ -4,7 +4,7 @@ import { consentText } from "../src/brand";
 import { adAllowed, isNightKst, marketingActive, MARKETING_VALID_MS } from "../src/lead/consent";
 
 const kst = (iso: string) => Date.parse(`${iso}+09:00`);
-const b = { name: "Define404", url: "https://define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
+const b = { name: "Define404", url: "https://contact.define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
 
 describe("동의 문구 (개인정보 보호법 제15조 제2항)", () => {
   const t = consentText(b);
