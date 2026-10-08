@@ -4,6 +4,7 @@ import { Hono, type Context } from "hono";
 import { brand, consentText, CONSENT_VERSION } from "./brand";
 import { publicView, runCheck } from "./core/check";
 import { checkHomepage } from "./core/homepage";
+import { allowedOrigins, checkOrigin, isJson, isWrite } from "./core/origin";
 import { strictGuard } from "./core/safefetch";
 import type { Env } from "./env";
 import { adAllowed } from "./lead/consent";
@@ -13,6 +14,21 @@ import { cleanup, leadExists, loadCheck, saveCheck, saveLead, takeDaily, withdra
 import { providers } from "./places";
 
 const app = new Hono<{ Bindings: Env }>();
+
+// 다른 사이트에서 보낸 쓰기 요청은 받지 않는다 (text/plain 같은 단순 POST 포함, 부작용 전에 끊는다)
+// 메일 프로그램의 원클릭 수신 거부(RFC 8058)는 Origin 없이 폼 형식으로 오므로 Content-Type 검사에서 뺀다
+const FORM_POST = new Set(["/api/unsubscribe"]);
+app.use("*", async (c, next) => {
+  if (isWrite(c.req.method)) {
+    const allowed = allowedOrigins(c.req.url, c.env.ALLOWED_ORIGINS, c.env.MOCK === "1");
+    const g = checkOrigin({ origin: c.req.header("Origin"), fetchSite: c.req.header("Sec-Fetch-Site") }, allowed);
+    if (!g.ok) return c.json({ error: g.error }, g.status);
+    if (c.req.path.startsWith("/api/") && !FORM_POST.has(c.req.path) && !isJson(c.req.header("Content-Type"))) {
+      return c.json({ error: "Content-Type 은 application/json 이어야 합니다" }, 415);
+    }
+  }
+  await next();
+});
 
 // 접속자별 요청 제한
 app.use("/api/*", async (c, next) => {

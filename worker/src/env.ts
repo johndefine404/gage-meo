@@ -3,6 +3,8 @@ export interface Env {
   LIMITER?: RateLimit;
 
   MOCK?: string;
+  // 쓰기 요청을 받아 줄 다른 출처 (쉼표 구분). 비우면 이 사이트 자신의 주소만 받는다
+  ALLOWED_ORIGINS?: string;
   DAILY_CHECK_LIMIT: string;
   DAILY_LEAD_LIMIT: string;
   MAIL_FROM: string;

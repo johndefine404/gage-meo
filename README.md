@@ -164,6 +164,14 @@ Resend: https://resend.com 에서 도메인을 인증하고 API 키를 `RESEND_A
 
 남은 한계: DNS 확인과 실제 연결 사이에 주소가 바뀌는 공격(DNS 리바인딩)은 이 방식으로 완전히 막지 못합니다. Cloudflare Workers 에서 돌리면 요청이 Cloudflare 망에서 나가므로 운영자 내부망에는 닿지 않지만, 다른 환경에 옮길 때는 이 점을 따로 막아야 합니다.
 
+## 다른 사이트에서 보낸 쓰기 요청 막기
+
+- 쓰기 요청(POST·PUT·PATCH·DELETE)은 `Origin` 이 이 사이트 주소일 때만 받습니다. 다른 출처면 아무것도 저장하지 않고 403 을 돌려줍니다. `text/plain` 같은 단순 POST 도 같습니다.
+- `Origin` 이 `null` 이면 `Sec-Fetch-Site: same-origin` 일 때만 받습니다. `Origin` 이 없으면 `Sec-Fetch-Site: cross-site` 만 막고, 머리글이 없는 서버·메일 프로그램 요청은 받습니다.
+- `/api/check`, `/api/lead` 는 `Content-Type: application/json` 이 아니면 415 입니다.
+- 메일 프로그램의 원클릭 수신 거부(`POST /api/unsubscribe`, RFC 8058)는 폼 형식 그대로 받습니다.
+- 다른 출처를 더 받으려면 `ALLOWED_ORIGINS` 에 쉼표로 적습니다. `MOCK=1` 시험 모드에서는 `http://localhost` 도 받습니다.
+
 ## 로컬에서 시험하기
 
 ```bash
