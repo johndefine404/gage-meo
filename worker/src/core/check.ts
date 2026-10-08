@@ -11,6 +11,8 @@ export type CheckResult = Summary & {
   createdAt: number;
   input: CheckInput;
   mock: { naver: boolean; kakao: boolean };
+  pending: { naver: boolean; kakao: boolean }; // 지도 확인 준비 중 (검색 API 키 없음)
+  scoreNote: string | null; // 점수를 읽을 때 알아야 할 것 (지도 확인 준비 중 등)
   items: Item[];
   homepageUrl: string | null;
   suggestBookingMeo: boolean;
@@ -28,6 +30,7 @@ export type CheckDeps = {
 export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<CheckResult> {
   const q = { name: input.name, region: input.region };
   const search = async (p: PlaceProvider) => {
+    if (p.pending) return { place: null, candidates: 0, pending: true };
     try {
       const list = await p.search(q);
       return { place: pickPlace(list, input.name, input.region), candidates: list.length };
@@ -44,6 +47,12 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   const items = buildItems({ naver, kakao, homepage, homepageFrom });
   const summary = summarize(items);
+  const pending = { naver: !!deps.naver.pending, kakao: !!deps.kakao.pending };
+  const scoreNote =
+    pending.naver || pending.kakao
+      ? `지도 확인은 준비 중입니다. ${[pending.naver && "네이버", pending.kakao && "카카오"].filter(Boolean).join("·")} 지도 항목은 아직 확인하지 못해 0점으로 셌습니다. 지금 점수는 홈페이지와 상담·예약 창구를 실제로 점검한 결과입니다.`
+      : null;
+  if (scoreNote) summary.grade = "지도 확인 준비 중";
   const chat = items.find((i) => i.id === "chat_channel");
   return {
     ...summary,
@@ -51,6 +60,8 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
     createdAt: deps.now ? deps.now() : Date.now(),
     input: { name: input.name, region: input.region, url: input.url || undefined },
     mock: { naver: deps.naver.mock, kakao: deps.kakao.mock },
+    pending,
+    scoreNote,
     items,
     homepageUrl: homepage?.finalUrl ?? (url || null),
     suggestBookingMeo: (deps.suggestBookingMeo ?? true) && chat?.status !== "pass",

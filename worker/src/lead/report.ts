@@ -26,6 +26,7 @@ export function reportText(r: CheckResult, b: Brand, o: MailOpts = { ad: false, 
   lines.push(`점수: ${r.score}점 / 100점 (${r.grade})`);
   lines.push(`점검 시각: ${new Date(r.createdAt + 9 * 3600_000).toISOString().slice(0, 16).replace("T", " ")} (한국 시간)`);
   if (r.mock.naver || r.mock.kakao) lines.push("참고: 이 리포트의 지도 검색 결과는 예시 데이터입니다.");
+  if (r.scoreNote) lines.push(`참고: ${r.scoreNote}`);
   lines.push("");
   for (const g of r.groups) lines.push(`${g.title}: ${g.points} / ${g.max}`);
 
@@ -64,6 +65,7 @@ export function reportText(r: CheckResult, b: Brand, o: MailOpts = { ad: false, 
   );
   if (o.marketing && o.unsubscribeUrl) lines.push(`광고 메일을 그만 받으려면 이 링크를 누르세요 (무료, 바로 처리): ${o.unsubscribeUrl}`);
   lines.push("개인정보 삭제를 원하시면 이 메일에 회신해 주세요.");
+  lines.push(`개인정보 처리방침: ${b.privacyUrl}`);
   return lines.join("\n");
 }
 

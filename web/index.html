@@ -45,6 +45,7 @@
       <button type="submit" class="btn">점검하기</button>
       <p class="err" id="checkErr" role="alert"></p>
       <p class="mock-note" id="mockNote" hidden>지금은 시험 모드입니다. 지도 검색 결과는 예시 데이터이고, 홈페이지 점검만 실제로 합니다.</p>
+      <p class="mock-note" id="pendingNote" hidden>지도 확인은 준비 중입니다. 지금은 홈페이지와 상담·예약 창구만 실제로 점검하고, 지도 항목은 "확인 못 함"으로 표시합니다.</p>
     </form>
   </section>
 
@@ -57,6 +58,7 @@
         <div class="meter"><i id="resMeter"></i></div>
         <ul class="groups" id="resGroups"></ul>
         <p class="mock-note" id="resMock" hidden>지도 검색 결과는 예시 데이터입니다 (시험 모드).</p>
+        <p class="mock-note" id="resNote" hidden></p>
       </div>
       <div class="items card">
         <div class="items-head">
@@ -75,9 +77,9 @@
         <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
         <div class="consent">
           <label class="check"><input type="checkbox" name="consentPrivacy"><span><b>[필수]</b> 개인정보 수집·이용에 동의합니다</span></label>
-          <details><summary>내용 보기</summary><ul id="privacyText"></ul></details>
+          <details><summary>내용 보기</summary><ul id="privacyText"></ul><p class="policy">자세한 내용은 <a data-privacy-link href="https://contact.define404.com/privacy.html">개인정보 처리방침</a>을 확인해 주세요.</p></details>
           <label class="check"><input type="checkbox" name="consentMarketing"><span><b>[선택]</b> 광고성 정보(유료 서비스 안내) 메일 수신에 동의합니다</span></label>
-          <details><summary>내용 보기</summary><ul id="marketingText"></ul></details>
+          <details><summary>내용 보기</summary><ul id="marketingText"></ul><p class="policy">자세한 내용은 <a data-privacy-link href="https://contact.define404.com/privacy.html">개인정보 처리방침</a>을 확인해 주세요.</p></details>
         </div>
         <button type="submit" class="btn">리포트 받기</button>
         <p class="err" id="leadErr" role="alert"></p>
@@ -116,7 +118,7 @@
 
   <footer>
     <span>가게냥 (gage-meo) · MIT License · 만든 곳 <a data-brand-link href="https://contact.define404.com" data-brand-name>Define404</a></span>
-    <span>점검 결과는 7일 뒤 지웁니다.</span>
+    <span>점검 결과는 7일 뒤 지웁니다. · <a data-privacy-link href="https://contact.define404.com/privacy.html">개인정보 처리방침</a></span>
   </footer>
 </div>
 <script src="./app.js" defer></script>

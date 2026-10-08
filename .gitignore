@@ -12,3 +12,4 @@ secrets/
 *.log
 __pycache__/
 .DS_Store
+wrangler.prod.toml

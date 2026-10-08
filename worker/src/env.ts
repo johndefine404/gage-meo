@@ -13,7 +13,10 @@ export interface Env {
   // 카카오 로컬 API (키워드 검색)
   KAKAO_REST_KEY?: string;
 
-  // 리포트 메일과 새 신청 알림 (Resend)
+  // 리포트 메일과 새 신청 알림. Gmail API(셋 다 있을 때)가 먼저, 없으면 Resend
+  GMAIL_CLIENT_ID?: string;
+  GMAIL_CLIENT_SECRET?: string;
+  GMAIL_REFRESH_TOKEN?: string;
   RESEND_API_KEY?: string;
   OWNER_EMAIL?: string;
 
@@ -25,4 +28,6 @@ export interface Env {
   CTA_LABEL?: string;
   PRIVACY_OWNER?: string;
   SUGGEST_BOOKING_MEO?: string;
+  // 개인정보 처리방침 주소 (동의 문구와 화면 아래에 링크로 건다)
+  PRIVACY_URL?: string;
 }

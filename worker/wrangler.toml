@@ -22,7 +22,8 @@ namespace_id = "1101"
 simple = { limit = 10, period = 60 }
 
 [vars]
-# 1이면 네이버·카카오 API를 부르지 않고 예시 데이터로 답한다. 키가 없어도 자동으로 예시 데이터를 쓴다
+# 1이면 네이버·카카오 API를 부르지 않고 예시 데이터로 답한다 (로컬 시험용)
+# 0인데 키가 없으면 예시 데이터 대신 지도 항목을 "확인 못 함(지도 확인 준비 중)"으로 둔다
 MOCK = "0"
 # 하루 점검 상한 (네이버 검색 API 하루 25,000건, 카카오 로컬 하루 100,000건 안쪽으로)
 DAILY_CHECK_LIMIT = "500"
@@ -37,6 +38,8 @@ CTA_URL = ""
 CTA_LABEL = ""
 PRIVACY_OWNER = ""
 SUGGEST_BOOKING_MEO = ""
+# 개인정보 처리방침 주소. 비우면 brand.json 값을 쓴다
+PRIVACY_URL = ""
 
 # 매일 한 번 오래된 점검 결과(7일)와 신청 기록(1년)을 지운다
 [triggers]

@@ -20,5 +20,7 @@ export const queryText = (q: PlaceQuery) => `${q.region} ${q.name}`.trim();
 export interface PlaceProvider {
   source: Source;
   mock: boolean;
+  // 검색 API 키가 아직 없어 지도 확인을 하지 않는 상태 (운영에서 예시 데이터를 보여 주지 않는다)
+  pending?: boolean;
   search(q: PlaceQuery): Promise<Place[]>;
 }

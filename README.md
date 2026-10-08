@@ -41,7 +41,7 @@ worker/
   src/index.ts    Hono 라우트: /api/config, /api/check, /api/lead, /api/unsubscribe
   src/places/     네이버·카카오 어댑터와 예시 데이터
   src/core/       정규화·비교, 홈페이지 점검, SSRF 방지 가져오기, 점수표
-  src/lead/       D1 저장, 리포트 본문, 메일(Resend), 광고 수신 규칙
+  src/lead/       D1 저장, 리포트 본문, 메일(Gmail API 또는 Resend), 광고 수신 규칙
   brand.json      브랜드 기본값
   migrations/     D1 테이블
   test/           단위 시험 (vitest)
@@ -52,8 +52,8 @@ worker/
 ### 1. 준비물
 
 - Cloudflare 무료 계정, Node.js 20 이상
-- 네이버 검색 API 키, 카카오 로컬 API 키 (아래 3절). 없으면 예시 데이터로 동작합니다
-- (메일) Resend 계정. 도메인을 인증해야 다른 사람에게 메일을 보낼 수 있습니다
+- 네이버 검색 API 키, 카카오 로컬 API 키 (아래 3절). 없으면 지도 항목을 "확인 못 함(지도 확인 준비 중)"으로 두고 홈페이지·창구만 점검합니다
+- (메일) Google Workspace 메일(Gmail API, 아래 4절) 또는 Resend 계정 중 하나
 
 ### 2. 배포
 
@@ -66,12 +66,17 @@ npx wrangler d1 migrations apply DB --remote
 npx wrangler secret put NAVER_CLIENT_ID
 npx wrangler secret put NAVER_CLIENT_SECRET
 npx wrangler secret put KAKAO_REST_KEY
-npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put GMAIL_CLIENT_ID       # Gmail API 를 쓸 때 (4절)
+npx wrangler secret put GMAIL_CLIENT_SECRET
+npx wrangler secret put GMAIL_REFRESH_TOKEN
+# 또는 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put OWNER_EMAIL           # 새 신청 알림을 받을 메일
 npx wrangler deploy
 ```
 
-`wrangler.toml` 의 `MAIL_FROM` 은 Resend 에서 인증한 도메인 주소로 바꿉니다.
+`wrangler.toml` 의 `MAIL_FROM` 은 보내는 주소로 바꿉니다 (Gmail 이면 그 Workspace 계정 주소, Resend 면 인증한 도메인 주소). `PRIVACY_URL` 에는 운영하는 쪽의 개인정보 처리방침 주소를 넣습니다. 동의 문구와 화면 아래에 링크로 걸립니다.
+
+비밀값은 터미널에 찍히지 않게 표준 입력으로 넣습니다. 예: `cat client_id.txt | npx wrangler secret put GMAIL_CLIENT_ID`
 
 ### 3. API 키 받기
 
@@ -89,7 +94,23 @@ npx wrangler deploy
 3. 제품 설정에서 카카오맵(로컬) 사용 설정이 필요하면 켭니다
 4. 문서: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-by-keyword
 
-키가 하나라도 없으면 그쪽은 예시 데이터로 답하고, 화면에 시험 모드라고 표시합니다.
+키가 없으면 그쪽 지도 항목은 "확인 못 함"으로 두고, 화면과 리포트에 "지도 확인은 준비 중"이라고 적습니다. 예시 데이터는 `MOCK=1` 일 때만 씁니다 (로컬 시험용).
+
+### 4. 메일 보내는 길 고르기
+
+비밀값에 따라 자동으로 고릅니다: `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN` 셋이 다 있으면 Gmail API, 아니면 `RESEND_API_KEY` 가 있으면 Resend, 둘 다 없으면 보내지 않고 로그만 남깁니다.
+
+Gmail API (Google Workspace 계정으로 보내기)
+
+1. https://console.cloud.google.com 에서 프로젝트를 만들고 API 및 서비스 > 라이브러리에서 Gmail API 를 켭니다
+2. OAuth 동의 화면을 내부(Internal, Workspace 전용)로 만들고 범위에 `https://www.googleapis.com/auth/gmail.send` 하나만 넣습니다
+3. 사용자 인증 정보 > OAuth 클라이언트 ID 만들기에서 유형을 "데스크톱 앱"으로 고릅니다. 나온 클라이언트 ID 와 보안 비밀이 `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET` 입니다
+4. 보낼 계정으로 로그인한 채 `gmail.send` 범위로 승인을 한 번 받아 갱신 토큰(refresh token)을 얻습니다. 예: Google 의 OAuth 2.0 Playground(설정에서 자기 클라이언트 ID 사용)나 `google-auth-oauthlib` 의 `InstalledAppFlow` 로 승인하면 갱신 토큰이 나옵니다. 이것이 `GMAIL_REFRESH_TOKEN` 입니다
+5. `MAIL_FROM` 은 `가게냥 <그 계정 주소>` 처럼 승인한 계정 주소로 적습니다. 다른 주소로 보내려면 Gmail 설정의 "다른 주소에서 메일 보내기"에 먼저 등록해야 합니다
+
+서버는 갱신 토큰으로 접근 토큰을 받아 만료 전까지 메모리에 두고, 제목·보낸 이름을 UTF-8 로 인코딩한 MIME 메일(text/plain 과 text/html 두 부분, 수신 거부 머리글 포함)을 만들어 `users/me/messages/send` 로 보냅니다. 범위가 `gmail.send` 뿐이라 메일함을 읽을 수는 없습니다.
+
+Resend: https://resend.com 에서 도메인을 인증하고 API 키를 `RESEND_API_KEY` 로 넣습니다.
 
 ## 대행사용 브랜드 설정
 
@@ -104,6 +125,7 @@ npx wrangler deploy
 | `ctaLabel` | `CTA_LABEL` | 문의 상자 제목 |
 | `privacyOwner` | `PRIVACY_OWNER` | 동의 문구에 나오는 개인정보 수집 주체 |
 | `suggestBookingMeo` | `SUGGEST_BOOKING_MEO` | 상담 창구가 없을 때 부킹냥 안내 (`1`/`0`) |
+| `privacyUrl` | `PRIVACY_URL` | 개인정보 처리방침 주소 (동의 문구, 화면 아래, 리포트 메일에 링크) |
 
 ## 개인정보와 광고 수신
 
@@ -123,6 +145,7 @@ npx wrangler deploy
 - 제50조 제2항·제5항·제6항: 수신 거부는 메일의 링크 한 번(`/api/unsubscribe`)으로 무료로 바로 처리되고, 같은 메일 주소의 모든 신청 기록에서 동의를 거둡니다. 메일 프로그램의 수신 거부 버튼(List-Unsubscribe)도 같이 겁니다
 - 제50조 제7항: 동의하거나 동의하지 않은 결과는 리포트 메일 아래에, 수신 거부 결과는 따로 짧은 메일로 알립니다 (메일 키가 없으면 로그에 남깁니다)
 - 제50조 제8항 (2년마다 재확인): 신청 기록을 1년 뒤 지우므로 동의가 2년을 넘기지 않습니다. 보관 기간을 늘려도 안전하도록 2년 지난 동의는 코드에서 무효로 봅니다
+- 처리 위탁과 국외 이전: 동의 문구의 "내용 보기"에 서버 운영·저장(Cloudflare, Inc., 미국)과 메일 발송(Google LLC, 미국) 위탁을 적고 개인정보 처리방침으로 연결합니다. 다른 업체를 쓰면 `worker/src/brand.ts` 의 문구와 버전을 바꿉니다
 - 동의 시각과 동의 문구 버전(`CONSENT_VERSION`)을 같이 저장합니다. 문구를 바꾸면 버전을 올립니다
 - 이 도구는 리포트 메일 말고는 광고 메일을 자동으로 보내지 않습니다. 운영자가 신청 기록으로 따로 광고를 보낼 때는 `consent_marketing = 1` 인 주소에만, 낮 시간에, 위 표기를 지켜 보내야 합니다
 - 메일 회신이 운영자에게 닿도록 `OWNER_EMAIL` 을 꼭 넣어 주세요 (리포트 메일의 회신 주소가 됩니다)
@@ -158,6 +181,7 @@ npm test                         # 단위 시험
 ## 확인한 것과 아직 확인하지 않은 것
 
 - 확인함: 정규화·비교·점수표·SSRF 검사·동의 문구·광고 수신 규칙 단위 시험, `wrangler dev` 예시 모드에서 수신 거부 링크와 처리 결과 알림(로그), 로컬 시험 서버로 홈페이지 점검, `wrangler dev` 예시 모드에서 점검과 리포트 신청 흐름, 실제 공개 사이트 홈페이지 점검
+- 확인함 (2026-10-09, `wrangler dev`): Gmail API 로 리포트 메일과 운영자 알림 실제 발송, 필수 동의 없는 신청 거절(400), 키가 없을 때 지도 항목 "준비 중" 표시, MIME 만들기 단위 시험
 - 확인하지 않음: 네이버·카카오 실제 API 호출 (키 발급 전, 응답 모양은 공식 문서 기준), Resend 실제 발송, 운영 배포와 cron 실행
 - 홈페이지는 서버가 내려준 HTML 만 읽습니다. 자바스크립트로 나중에 그려지는 링크·태그는 보지 못합니다
 - 네이버 지역 검색은 전화번호를 비워서 주는 경우가 많습니다. 이때 전화번호 일치는 "보완"으로 나옵니다
@@ -172,4 +196,4 @@ npm test                         # 단위 시험
 
 ## English
 
-gage-meo ("가게냥", shop cat) scores a Korean small business's online presence (0 to 100) from its name and region. It searches Naver Local Search and Kakao Local (behind adapters, with realistic mock data when keys are missing or `MOCK=1`), compares name, address and phone across the two after normalization, and checks the homepage for https, viewport, response time, title/description, Naver Search Advisor verification, sitemap/robots, Open Graph, and KakaoTalk channel, Naver TalkTalk and Naver Booking links. User-supplied URLs are fetched through an SSRF guard (http/https only, default ports, private IPs blocked after DNS-over-HTTPS resolution, max 3 re-validated redirects, timeout and size limit). The summary is shown on screen; the detailed report with fixes is emailed after required privacy consent. Optional marketing consent is stored separately: the paid-service CTA is included only for consenting recipients and only between 08:00 and 21:00 KST, with a "(광고)" subject prefix, sender contact and a one-click unsubscribe link (consent results are notified by email, consent older than 2 years is treated as void). Leads go to D1, and the operator is notified via Resend. Brand name, color and CTA are configurable for agencies. Runs on Cloudflare Workers (Hono) + D1. Real Naver/Kakao API calls are untested. MIT licensed.
+gage-meo ("가게냥", shop cat) scores a Korean small business's online presence (0 to 100) from its name and region. It searches Naver Local Search and Kakao Local (behind adapters; realistic mock data only with `MOCK=1`, and without keys the map items are reported as "pending" instead of faked), compares name, address and phone across the two after normalization, and checks the homepage for https, viewport, response time, title/description, Naver Search Advisor verification, sitemap/robots, Open Graph, and KakaoTalk channel, Naver TalkTalk and Naver Booking links. User-supplied URLs are fetched through an SSRF guard (http/https only, default ports, private IPs blocked after DNS-over-HTTPS resolution, max 3 re-validated redirects, timeout and size limit). The summary is shown on screen; the detailed report with fixes is emailed after required privacy consent. Optional marketing consent is stored separately: the paid-service CTA is included only for consenting recipients and only between 08:00 and 21:00 KST, with a "(광고)" subject prefix, sender contact and a one-click unsubscribe link (consent results are notified by email, consent older than 2 years is treated as void). Leads go to D1, and mail goes out through the Gmail API (Google Workspace, `gmail.send` scope only, multipart MIME built in the Worker) or Resend. Brand name, color and CTA are configurable for agencies. Runs on Cloudflare Workers (Hono) + D1. Real Naver/Kakao API calls are untested. MIT licensed.

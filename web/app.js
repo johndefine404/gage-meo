@@ -34,6 +34,12 @@
         ul.replaceChildren(...list.map((t) => el("li", null, t)));
       }
       if (cfg.mock.naver || cfg.mock.kakao) $("#mockNote").hidden = false;
+      if (cfg.pending && (cfg.pending.naver || cfg.pending.kakao)) {
+        $("#pendingNote").hidden = false;
+        $("#checkForm .hint").textContent = "지도 확인이 준비 중이라 홈페이지 주소를 적어 주셔야 홈페이지를 점검합니다.";
+      }
+      const pu = cfg.consent.privacyUrl || b.privacyUrl;
+      if (/^https?:\/\//.test(pu)) document.querySelectorAll("[data-privacy-link]").forEach((e) => (e.href = pu));
     })
     .catch(() => {});
 
@@ -65,6 +71,8 @@
     $("#resScore").textContent = r.score;
     $("#resGrade").textContent = r.grade;
     $("#resMock").hidden = !(r.mock.naver || r.mock.kakao);
+    $("#resNote").textContent = r.scoreNote || "";
+    $("#resNote").hidden = !r.scoreNote;
     requestAnimationFrame(() => ($("#resMeter").style.width = `${r.score}%`));
 
     $("#resGroups").replaceChildren(

@@ -29,7 +29,12 @@ app.get("/health", (c) => c.json({ ok: true }));
 app.get("/api/config", (c) => {
   const b = brand(c.env);
   const p = providers(c.env);
-  return c.json({ brand: b, consent: consentText(b), mock: { naver: p.naver.mock, kakao: p.kakao.mock } });
+  return c.json({
+    brand: b,
+    consent: consentText(b),
+    mock: { naver: p.naver.mock, kakao: p.kakao.mock },
+    pending: { naver: !!p.naver.pending, kakao: !!p.kakao.pending },
+  });
 });
 
 const clean = (v: unknown, max: number) => String(v ?? "").replace(/\s+/g, " ").trim().slice(0, max);

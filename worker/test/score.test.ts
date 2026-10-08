@@ -4,6 +4,7 @@ import type { HomepageResult } from "../src/core/homepage";
 import { buildItems, CATALOG, MAX_SCORE, summarize } from "../src/core/score";
 import { reportSubject, reportText, ownerNoticeText, withdrawNoticeText } from "../src/lead/report";
 import { mockProvider } from "../src/places/mock";
+import { pendingProvider, providers } from "../src/places";
 import type { Place } from "../src/places/types";
 
 const place = (p: Partial<Place>): Place => ({
@@ -130,7 +131,7 @@ describe("점검 한 번 (예시 데이터)", () => {
 
   it("리포트 본문", async () => {
     const r = await runCheck({ name: "모락 베이커리", region: "서울 강남구" }, { ...deps, homepage: async () => goodHome });
-    const brand = { name: "Define404", url: "https://contact.define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
+    const brand = { name: "Define404", url: "https://contact.define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true, privacyUrl: "https://contact.define404.com/privacy.html" };
     const t = reportText(r, brand, { ad: true, marketing: true, unsubscribeUrl: "https://x.example/api/unsubscribe?t=abc", now: 0 });
     expect(t).toContain("고치는 방법:");
     expect(t).toContain("github.com/johndefine404/booking-meo");
@@ -156,5 +157,43 @@ describe("점검 한 번 (예시 데이터)", () => {
     expect(t).not.toMatch(/\u2014/);
     expect(t).not.toMatch(/\*\*|^#/m);
     expect(ownerNoticeText(r, "a@b.co", true)).toContain("광고성 정보 수신 동의: 예");
+  });
+});
+
+describe("지도 확인 준비 중 (운영, 검색 API 키 없음)", () => {
+  const deps = { naver: pendingProvider("naver"), kakao: pendingProvider("kakao"), now: () => 0, id: () => "00000000-0000-0000-0000-000000000000" };
+
+  it("키가 없으면 예시 데이터가 아니라 준비 중 상태를 쓴다. MOCK=1 일 때만 예시 데이터", () => {
+    const env = { MOCK: "0" } as never;
+    const p = providers(env);
+    expect(p.naver.pending).toBe(true);
+    expect(p.kakao.pending).toBe(true);
+    expect(p.naver.mock).toBe(false);
+    expect(providers({ MOCK: "1" } as never).naver.mock).toBe(true);
+  });
+
+  it("지도 항목은 확인 못 함, 점수 설명에 준비 중을 적고 홈페이지는 실제로 본다", async () => {
+    let asked = "";
+    const r = await runCheck(
+      { name: "모락 베이커리", region: "서울 강남구", url: "shop.example" },
+      { ...deps, homepage: async (u) => ((asked = u), goodHome) },
+    );
+    expect(asked).toBe("shop.example");
+    for (const id of ["naver_found", "kakao_found", "name_match", "address_match", "phone_match"]) {
+      const it = r.items.find((i) => i.id === id)!;
+      expect(it.status).toBe("unknown");
+      expect(it.detail).toContain("준비 중");
+    }
+    expect(r.items.some((i) => i.detail.includes("예시"))).toBe(false);
+    expect(r.pending).toEqual({ naver: true, kakao: true });
+    expect(r.mock).toEqual({ naver: false, kakao: false });
+    expect(r.scoreNote).toContain("지도 확인은 준비 중");
+    expect(r.grade).toBe("지도 확인 준비 중");
+    expect(r.score).toBe(45);
+    const brand = { name: "Define404", url: "https://contact.define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true, privacyUrl: "https://contact.define404.com/privacy.html" };
+    const t = reportText(r, brand, { ad: false, marketing: false, now: 0 });
+    expect(t).toContain("지도 확인은 준비 중");
+    expect(t).not.toContain("예시 데이터");
+    expect(t).toContain("개인정보 처리방침: https://contact.define404.com/privacy.html");
   });
 });

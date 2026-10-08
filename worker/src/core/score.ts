@@ -19,8 +19,8 @@ export type Item = {
 };
 
 export type ScoreInput = {
-  naver: { place: Place | null; error?: string; candidates: number };
-  kakao: { place: Place | null; error?: string; candidates: number };
+  naver: { place: Place | null; error?: string; candidates: number; pending?: boolean };
+  kakao: { place: Place | null; error?: string; candidates: number; pending?: boolean };
   homepage: HomepageResult | null;
   homepageFrom: "input" | "naver" | null;
 };
@@ -170,7 +170,8 @@ export function buildItems(s: ScoreInput): Item[] {
     ["naver_found", s.naver, "네이버"],
     ["kakao_found", s.kakao, "카카오"],
   ] as const) {
-    if (side.error) items.push(item(id, "unknown", `${label} 검색을 하지 못했습니다 (${side.error})`));
+    if (side.pending) items.push(item(id, "unknown", `지도 확인은 준비 중입니다 (${label} 검색 연결 전이라 0점으로 셉니다)`));
+    else if (side.error) items.push(item(id, "unknown", `${label} 검색을 하지 못했습니다 (${side.error})`));
     else if (side.place) items.push(item(id, "pass", `"${side.place.name}" (${side.place.roadAddress || side.place.address})`));
     else if (side.candidates > 0) items.push(item(id, "fail", `비슷한 결과 ${side.candidates}곳이 나왔지만 이름이 맞는 가게가 없습니다`));
     else items.push(item(id, "fail", `${label}에서 검색되지 않습니다`));
@@ -204,7 +205,8 @@ export function buildItems(s: ScoreInput): Item[] {
         : undefined;
     items.push(item("phone_match", levelStatus(phL), phDetail, phFix));
   } else {
-    const why = "두 지도 모두에서 가게가 확인돼야 비교할 수 있습니다";
+    const why =
+      s.naver.pending || s.kakao.pending ? "지도 확인은 준비 중이라 비교하지 않았습니다" : "두 지도 모두에서 가게가 확인돼야 비교할 수 있습니다";
     items.push(item("name_match", "unknown", why), item("address_match", "unknown", why), item("phone_match", "unknown", why));
   }
 
