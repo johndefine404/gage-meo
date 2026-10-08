@@ -1,0 +1,43 @@
+# [Define404] 가게냥 (gage-meo)
+name = "gage-meo"
+main = "src/index.ts"
+compatibility_date = "2026-09-01"
+
+# 입력 화면과 결과 화면(web/)을 같은 주소에서 내보낸다
+[assets]
+directory = "../web"
+
+# 점검 결과와 리포트 신청(리드)을 보관한다
+# 운영 배포 전에 npx wrangler d1 create gage-meo 으로 만들고 나온 ID를 넣는다
+[[d1_databases]]
+binding = "DB"
+database_name = "gage-meo"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+# 접속자 한 명당 1분에 10번까지
+[[ratelimits]]
+name = "LIMITER"
+namespace_id = "1101"
+simple = { limit = 10, period = 60 }
+
+[vars]
+# 1이면 네이버·카카오 API를 부르지 않고 예시 데이터로 답한다. 키가 없어도 자동으로 예시 데이터를 쓴다
+MOCK = "0"
+# 하루 점검 상한 (네이버 검색 API 하루 25,000건, 카카오 로컬 하루 100,000건 안쪽으로)
+DAILY_CHECK_LIMIT = "500"
+# 하루 리포트 메일 발송 상한
+DAILY_LEAD_LIMIT = "100"
+MAIL_FROM = "가게냥 <onboarding@resend.dev>"
+# 브랜드(대행사용). 비우면 brand.json 값을 쓴다
+BRAND_NAME = ""
+BRAND_COLOR = ""
+BRAND_URL = ""
+CTA_URL = ""
+CTA_LABEL = ""
+PRIVACY_OWNER = ""
+SUGGEST_BOOKING_MEO = ""
+
+# 매일 한 번 오래된 점검 결과(7일)와 신청 기록(1년)을 지운다
+[triggers]
+crons = ["0 18 * * *"]

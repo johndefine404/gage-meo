@@ -1,0 +1,160 @@
+<p align="center"><img src="web/logo.svg" width="96" alt="가게냥"></p>
+
+# 가게냥 (gage-meo)
+
+[Define404]
+
+우리 가게 온라인 점검: 손님이 검색했을 때 가게가 제대로 보이는지 100점 만점으로 확인하는 소상공인용 무료 도구
+
+가게 이름과 지역만 넣으면 손님이 검색했을 때 가게가 제대로 보이는지 100점 만점으로 점검합니다. 네이버 지도와 카카오맵에 가게가 잡히는지, 두 곳의 이름·주소·전화번호가 같은지, 홈페이지가 휴대폰과 검색에 맞게 되어 있는지, 상담·예약 창구가 연결돼 있는지를 봅니다.
+
+- 화면에서는 요약 점수와 항목별 결과를 보여 줍니다
+- 항목마다 고치는 방법을 담은 상세 리포트는 메일로 보냅니다 (개인정보 수집 동의 필수, 광고성 정보 수신 동의 선택)
+- 대행사가 자기 이름·색·문의 주소로 배포할 수 있습니다
+- 오픈소스(MIT)라 누구나 무료로 쓰고 고칠 수 있습니다
+
+## 무엇을 보나 (v0.1, 15항목, 100점)
+
+| 묶음 | 항목 | 배점 |
+|---|---|---|
+| 지도 등록 (55) | 네이버 지도에 등록 / 카카오맵에 등록 | 15 / 15 |
+| | 두 지도의 가게 이름 일치 | 5 |
+| | 두 지도의 주소 일치 (시도 표기, 괄호, 층·호수 차이는 걸러 냄) | 10 |
+| | 두 지도의 전화번호 일치 (+82, 하이픈 정리, 0507 안심번호는 절반 점수) | 10 |
+| 홈페이지 (38) | 홈페이지 연결, https, 휴대폰 화면 대응(viewport), 첫 응답 속도, 검색 제목·설명 | 각 5 |
+| | 네이버 서치어드바이저 소유 확인 태그 (`naver-site-verification`) | 5 |
+| | 사이트맵·robots.txt | 5 |
+| | 카톡 공유 미리보기 (Open Graph) | 3 |
+| 상담·예약 창구 (7) | 카카오톡 채널(`pf.kakao.com`) 또는 네이버 톡톡(`talk.naver.com`) 링크 | 5 |
+| | 네이버 예약(`booking.naver.com`) 링크 | 2 |
+
+- 좋음은 만점, 보완은 절반, 고칠 것과 확인 못 함은 0점입니다
+- 홈페이지 주소를 비워 두면 네이버 검색 결과에 등록된 홈페이지를 씁니다
+- 홈페이지가 없으면 홈페이지·창구 항목은 "확인 못 함"(0점)입니다. 점수 기준은 100점 그대로 둡니다
+- 상담 창구가 없으면 리포트에 [부킹냥(booking-meo)](https://github.com/johndefine404/booking-meo)을 고치는 방법 중 하나로 안내합니다
+
+## 구조
+
+```
+web/              입력·결과 화면 (정적 파일)
+worker/
+  src/index.ts    Hono 라우트: /api/config, /api/check, /api/lead
+  src/places/     네이버·카카오 어댑터와 예시 데이터
+  src/core/       정규화·비교, 홈페이지 점검, SSRF 방지 가져오기, 점수표
+  src/lead/       D1 저장, 리포트 본문, 메일(Resend)
+  brand.json      브랜드 기본값
+  migrations/     D1 테이블
+  test/           단위 시험 (vitest)
+```
+
+## 설치
+
+### 1. 준비물
+
+- Cloudflare 무료 계정, Node.js 20 이상
+- 네이버 검색 API 키, 카카오 로컬 API 키 (아래 3절). 없으면 예시 데이터로 동작합니다
+- (메일) Resend 계정. 도메인을 인증해야 다른 사람에게 메일을 보낼 수 있습니다
+
+### 2. 배포
+
+```bash
+cd worker
+npm install
+npx wrangler login
+npx wrangler d1 create gage-meo              # 나온 database_id 를 wrangler.toml 에 넣는다
+npx wrangler d1 migrations apply DB --remote
+npx wrangler secret put NAVER_CLIENT_ID
+npx wrangler secret put NAVER_CLIENT_SECRET
+npx wrangler secret put KAKAO_REST_KEY
+npx wrangler secret put RESEND_API_KEY
+npx wrangler secret put OWNER_EMAIL           # 새 신청 알림을 받을 메일
+npx wrangler deploy
+```
+
+`wrangler.toml` 의 `MAIL_FROM` 은 Resend 에서 인증한 도메인 주소로 바꿉니다.
+
+### 3. API 키 받기
+
+네이버 검색 API (지역 검색, 하루 25,000건 무료)
+
+1. https://developers.naver.com 에 로그인하고 Application > 애플리케이션 등록
+2. 사용 API 에서 "검색"을 고르고, 환경은 WEB 설정에 배포할 주소를 적습니다
+3. 나온 Client ID 와 Client Secret 을 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` 으로 넣습니다
+4. 문서: https://developers.naver.com/docs/serviceapi/search/local/local.md
+
+카카오 로컬 API (키워드로 장소 검색)
+
+1. https://developers.kakao.com 에 로그인하고 내 애플리케이션 > 애플리케이션 추가
+2. 앱 설정 > 앱 키에서 REST API 키를 복사해 `KAKAO_REST_KEY` 로 넣습니다
+3. 제품 설정에서 카카오맵(로컬) 사용 설정이 필요하면 켭니다
+4. 문서: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-by-keyword
+
+키가 하나라도 없으면 그쪽은 예시 데이터로 답하고, 화면에 시험 모드라고 표시합니다.
+
+## 대행사용 브랜드 설정
+
+`worker/brand.json` 을 고치거나 `wrangler.toml` 의 `[vars]` 로 덮어씁니다. 환경 변수가 우선입니다.
+
+| brand.json | 환경 변수 | 설명 |
+|---|---|---|
+| `name` | `BRAND_NAME` | 화면·메일에 나오는 회사 이름 |
+| `url` | `BRAND_URL` | 회사 주소 |
+| `color` | `BRAND_COLOR` | 대표 색 (`#RRGGBB`) |
+| `ctaUrl` | `CTA_URL` | "고쳐 드립니다" 문의 주소 |
+| `ctaLabel` | `CTA_LABEL` | 문의 상자 제목 |
+| `privacyOwner` | `PRIVACY_OWNER` | 동의 문구에 나오는 개인정보 수집 주체 |
+| `suggestBookingMeo` | `SUGGEST_BOOKING_MEO` | 상담 창구가 없을 때 부킹냥 안내 (`1`/`0`) |
+
+## 리드와 개인정보
+
+- 리포트 신청은 개인정보 수집·이용 동의가 없으면 받지 않습니다 (서버에서 400)
+- 광고성 정보 수신 동의는 따로 받고, 동의 시각과 동의 문구 버전을 같이 저장합니다
+- 점검 결과는 7일, 신청 기록은 1년 뒤 매일 한 번 지웁니다 (cron)
+- 같은 점검에 같은 메일로 다시 신청하면 메일을 다시 보내지 않습니다
+- 보호 장치: 접속자당 1분 10회, 하루 점검 상한(`DAILY_CHECK_LIMIT`), 하루 리포트 상한(`DAILY_LEAD_LIMIT`), 봇용 숨은 칸
+- 동의 문구는 `worker/src/brand.ts` 에 있습니다. 배포 전에 운영자가 법령에 맞는지 직접 확인해 주세요
+
+## 사용자가 넣은 주소를 여는 방식 (SSRF 방지)
+
+서버가 홈페이지를 대신 열기 때문에 내부망을 엿보는 데 쓰이지 않게 막습니다.
+
+- http, https 만, 기본 포트(80, 443)만, 아이디·비밀번호가 들어간 주소는 거절
+- `localhost`, `.local` 같은 내부 이름과 사설·루프백·링크로컬·예약 IP(IPv4, IPv6, IPv4 매핑 표기 포함)는 거절
+- 도메인은 DNS-over-HTTPS(Cloudflare)로 풀어서 나온 IP가 하나라도 내부망이면 거절
+- 리다이렉트는 직접 따라가며 최대 3번, 매번 같은 검사를 다시 합니다
+- 요청당 8초 제한, 페이지는 1.5MB까지만 읽습니다
+
+남은 한계: DNS 확인과 실제 연결 사이에 주소가 바뀌는 공격(DNS 리바인딩)은 이 방식으로 완전히 막지 못합니다. Cloudflare Workers 에서 돌리면 요청이 Cloudflare 망에서 나가므로 운영자 내부망에는 닿지 않지만, 다른 환경에 옮길 때는 이 점을 따로 막아야 합니다.
+
+## 로컬에서 시험하기
+
+```bash
+cd worker
+npm install
+npx wrangler types
+cp .dev.vars.example .dev.vars
+npm run db:local                 # 로컬 D1 테이블 만들기
+npm run dev:mock                 # 지도 API 호출 없이 예시 데이터로
+npm test                         # 단위 시험
+```
+
+`http://localhost:8787/` 을 엽니다. 예시 데이터는 입력한 이름·지역으로 가상의 가게를 만듭니다. 이름에 "없는"을 넣으면 두 지도 모두 검색되지 않고, "카카오만"을 넣으면 네이버에서만 빠집니다. 메일 키가 없으면 리포트와 알림 내용을 터미널 로그에 찍습니다.
+
+## 확인한 것과 아직 확인하지 않은 것
+
+- 확인함: 정규화·비교·점수표·SSRF 검사 단위 시험, 로컬 시험 서버로 홈페이지 점검, `wrangler dev` 예시 모드에서 점검과 리포트 신청 흐름, 실제 공개 사이트 홈페이지 점검
+- 확인하지 않음: 네이버·카카오 실제 API 호출 (키 발급 전, 응답 모양은 공식 문서 기준), Resend 실제 발송, 운영 배포와 cron 실행
+- 홈페이지는 서버가 내려준 HTML 만 읽습니다. 자바스크립트로 나중에 그려지는 링크·태그는 보지 못합니다
+- 네이버 지역 검색은 전화번호를 비워서 주는 경우가 많습니다. 이때 전화번호 일치는 "보완"으로 나옵니다
+
+## 만든 곳
+
+[Define404](https://define404.com) · JohnLKim
+
+지도 정보 정리, 홈페이지 수정, 상담 창구 연결은 Define404에 문의해 주세요.
+
+---
+
+## English
+
+gage-meo ("가게냥", shop cat) scores a Korean small business's online presence (0 to 100) from its name and region. It searches Naver Local Search and Kakao Local (behind adapters, with realistic mock data when keys are missing or `MOCK=1`), compares name, address and phone across the two after normalization, and checks the homepage for https, viewport, response time, title/description, Naver Search Advisor verification, sitemap/robots, Open Graph, and KakaoTalk channel, Naver TalkTalk and Naver Booking links. User-supplied URLs are fetched through an SSRF guard (http/https only, default ports, private IPs blocked after DNS-over-HTTPS resolution, max 3 re-validated redirects, timeout and size limit). The summary is shown on screen; the detailed report with fixes is emailed after required privacy consent (optional marketing consent stored separately), leads go to D1, and the operator is notified via Resend. Brand name, color and CTA are configurable for agencies. Runs on Cloudflare Workers (Hono) + D1. Real Naver/Kakao API calls are untested. MIT licensed.

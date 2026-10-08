@@ -1,0 +1,25 @@
+{
+  "name": "gage-meo-worker",
+  "private": true,
+  "description": "가게냥, 우리 가게 온라인 점검: 네이버·카카오 지도 등록 상태와 홈페이지를 점수로 보여 주는 소상공인용 도구",
+  "author": "Define404 <john@define404.com>",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "dev:mock": "wrangler dev --var MOCK:1",
+    "db:local": "wrangler d1 migrations apply DB --local",
+    "deploy": "wrangler deploy",
+    "types": "wrangler types",
+    "check": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.40.0"
+  }
+}

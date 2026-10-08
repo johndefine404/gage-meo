@@ -1,0 +1,13 @@
+# 로컬 시험용 비밀값. 이 파일을 .dev.vars 로 복사해서 채운다 (.dev.vars 는 저장소에 올리지 않는다)
+# 운영에서는 같은 이름으로 npx wrangler secret put <이름> 을 쓴다
+
+# 네이버 검색 API (지역 검색). developers.naver.com 에서 애플리케이션 등록
+NAVER_CLIENT_ID=
+NAVER_CLIENT_SECRET=
+
+# 카카오 로컬 API. developers.kakao.com 에서 앱 만들고 REST API 키
+KAKAO_REST_KEY=
+
+# 리포트 메일과 새 신청 알림 (Resend, 무료 월 3,000건)
+RESEND_API_KEY=
+OWNER_EMAIL=
