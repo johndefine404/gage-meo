@@ -80,12 +80,14 @@ npx wrangler deploy
 
 ### 3. API 키 받기
 
-네이버 검색 API (지역 검색, 하루 25,000건 무료)
+네이버 검색 API (지역 검색, 하루 25,000건)
 
-1. https://developers.naver.com 에 로그인하고 Application > 애플리케이션 등록
-2. 사용 API 에서 "검색"을 고르고, 환경은 WEB 설정에 배포할 주소를 적습니다
-3. 나온 Client ID 와 Client Secret 을 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` 으로 넣습니다
-4. 문서: https://developers.naver.com/docs/serviceapi/search/local/local.md
+2026년 7월 31일부터 새 키는 developers.naver.com 이 아니라 네이버 클라우드 플랫폼의 NAVER API HUB 에서 받습니다.
+
+1. https://www.ncloud.com 에 가입하고 본인 인증, 결제 수단 등록을 마칩니다 (2026-10 기준 검색 API 는 무료)
+2. 콘솔에서 NAVER API HUB > 이용 신청 후, Application 을 만들고 API 로 "NAVER 검색 > 지역"을 고릅니다
+3. 인증 정보 탭의 Client ID 와 Client Secret 을 `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` 으로 넣습니다
+4. 예전에 developers.naver.com 에서 받은 키가 있으면 그대로 넣고 `wrangler.toml` 의 `[vars]` 에 `NAVER_API_SOURCE = "openapi"` 를 추가합니다
 
 카카오 로컬 API (키워드로 장소 검색)
 

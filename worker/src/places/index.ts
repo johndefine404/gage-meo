@@ -12,7 +12,7 @@ export function providers(env: Env): { naver: PlaceProvider; kakao: PlaceProvide
     naver: mock
       ? mockProvider("naver")
       : env.NAVER_CLIENT_ID && env.NAVER_CLIENT_SECRET
-        ? naverProvider(env.NAVER_CLIENT_ID, env.NAVER_CLIENT_SECRET)
+        ? naverProvider(env.NAVER_CLIENT_ID, env.NAVER_CLIENT_SECRET, env.NAVER_API_SOURCE === "openapi" ? "openapi" : "hub")
         : pendingProvider("naver"),
     kakao: mock ? mockProvider("kakao") : env.KAKAO_REST_KEY ? kakaoProvider(env.KAKAO_REST_KEY) : pendingProvider("kakao"),
   };

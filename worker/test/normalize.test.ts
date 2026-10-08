@@ -104,3 +104,19 @@ describe("예시 데이터", () => {
     expect(mockPlaces("kakao", { name: "카카오만 카페", region: "서울" })).toHaveLength(1);
   });
 });
+
+import { naverRequest } from "../src/places/naver";
+
+describe("naverRequest", () => {
+  it("기본은 API HUB 주소와 머리말", () => {
+    const r = naverRequest("hub", "id", "sec", "강남 국밥");
+    expect(r.url.startsWith("https://naverapihub.apigw.ntruss.com/search/v1/local?")).toBe(true);
+    expect(r.headers["X-NCP-APIGW-API-KEY-ID"]).toBe("id");
+    expect(r.headers["X-NCP-APIGW-API-KEY"]).toBe("sec");
+  });
+  it("openapi 는 예전 주소", () => {
+    const r = naverRequest("openapi", "id", "sec", "x");
+    expect(r.url.startsWith("https://openapi.naver.com/v1/search/local.json?")).toBe(true);
+    expect(r.headers["X-Naver-Client-Id"]).toBe("id");
+  });
+});

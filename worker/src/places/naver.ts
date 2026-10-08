@@ -1,6 +1,7 @@
 // 네이버 검색 API: 지역 검색 어댑터
-// 문서: https://developers.naver.com/docs/serviceapi/search/local/local.md
-// 주의: 실제 키로 호출해 본 적 없음 (키 발급 전). 응답 모양은 공식 문서 기준
+// 2026-07-31 부터 새 키는 네이버 클라우드 플랫폼의 NAVER API HUB 에서만 발급된다.
+// 기본은 API HUB 주소를 쓰고, 예전 developers.naver.com 키는 NAVER_API_SOURCE=openapi 로 쓴다.
+// 응답 모양은 두 주소가 같다 (2026-10-09 실제 키로 확인)
 import { queryText, type Place, type PlaceProvider } from "./types";
 
 type NaverItem = {
@@ -13,14 +14,30 @@ type NaverItem = {
   roadAddress: string;
 };
 
-export function naverProvider(clientId: string, clientSecret: string, fetchImpl: typeof fetch = fetch): PlaceProvider {
+export type NaverSource = "hub" | "openapi";
+
+export function naverRequest(source: NaverSource, clientId: string, clientSecret: string, query: string): { url: string; headers: Record<string, string> } {
+  const qs = `display=5&query=${encodeURIComponent(query)}`;
+  if (source === "openapi") {
+    return {
+      url: `https://openapi.naver.com/v1/search/local.json?${qs}`,
+      headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret },
+    };
+  }
+  return {
+    url: `https://naverapihub.apigw.ntruss.com/search/v1/local?${qs}`,
+    headers: { "X-NCP-APIGW-API-KEY-ID": clientId, "X-NCP-APIGW-API-KEY": clientSecret },
+  };
+}
+
+export function naverProvider(clientId: string, clientSecret: string, source: NaverSource = "hub", fetchImpl: typeof fetch = fetch): PlaceProvider {
   return {
     source: "naver",
     mock: false,
     async search(q) {
-      const url = `https://openapi.naver.com/v1/search/local.json?display=5&query=${encodeURIComponent(queryText(q))}`;
+      const { url, headers } = naverRequest(source, clientId, clientSecret, queryText(q));
       const res = await fetchImpl(url, {
-        headers: { "X-Naver-Client-Id": clientId, "X-Naver-Client-Secret": clientSecret },
+        headers,
         signal: AbortSignal.timeout(6000),
       });
       if (!res.ok) throw new Error(`naver ${res.status}`);

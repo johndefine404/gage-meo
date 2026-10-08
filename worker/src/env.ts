@@ -9,9 +9,11 @@ export interface Env {
   DAILY_LEAD_LIMIT: string;
   MAIL_FROM: string;
 
-  // 네이버 검색 API (지역 검색)
+  // 네이버 검색 API (지역 검색). NAVER API HUB 의 Client ID / Client Secret
   NAVER_CLIENT_ID?: string;
   NAVER_CLIENT_SECRET?: string;
+  // 예전 developers.naver.com 에서 받은 키면 "openapi". 비우면 API HUB
+  NAVER_API_SOURCE?: string;
   // 카카오 로컬 API (키워드 검색)
   KAKAO_REST_KEY?: string;
 
