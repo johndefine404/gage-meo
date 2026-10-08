@@ -9,7 +9,7 @@
 가게 이름과 지역만 넣으면 손님이 검색했을 때 가게가 제대로 보이는지 100점 만점으로 점검합니다. 네이버 지도와 카카오맵에 가게가 잡히는지, 두 곳의 이름·주소·전화번호가 같은지, 홈페이지가 휴대폰과 검색에 맞게 되어 있는지, 상담·예약 창구가 연결돼 있는지를 봅니다.
 
 - 화면에서는 요약 점수와 항목별 결과를 보여 줍니다
-- 항목마다 고치는 방법을 담은 상세 리포트는 메일로 보냅니다 (개인정보 수집 동의 필수, 광고성 정보 수신 동의 선택)
+- 항목마다 고치는 방법을 담은 상세 리포트는 메일로 보냅니다 (개인정보 수집 동의 필수, 광고성 정보 수신 동의 선택, 아래 "개인정보와 광고 수신")
 - 대행사가 자기 이름·색·문의 주소로 배포할 수 있습니다
 - 오픈소스(MIT)라 누구나 무료로 쓰고 고칠 수 있습니다
 
@@ -38,10 +38,10 @@
 ```
 web/              입력·결과 화면 (정적 파일)
 worker/
-  src/index.ts    Hono 라우트: /api/config, /api/check, /api/lead
+  src/index.ts    Hono 라우트: /api/config, /api/check, /api/lead, /api/unsubscribe
   src/places/     네이버·카카오 어댑터와 예시 데이터
   src/core/       정규화·비교, 홈페이지 점검, SSRF 방지 가져오기, 점수표
-  src/lead/       D1 저장, 리포트 본문, 메일(Resend)
+  src/lead/       D1 저장, 리포트 본문, 메일(Resend), 광고 수신 규칙
   brand.json      브랜드 기본값
   migrations/     D1 테이블
   test/           단위 시험 (vitest)
@@ -105,14 +105,29 @@ npx wrangler deploy
 | `privacyOwner` | `PRIVACY_OWNER` | 동의 문구에 나오는 개인정보 수집 주체 |
 | `suggestBookingMeo` | `SUGGEST_BOOKING_MEO` | 상담 창구가 없을 때 부킹냥 안내 (`1`/`0`) |
 
-## 리드와 개인정보
+## 개인정보와 광고 수신
 
-- 리포트 신청은 개인정보 수집·이용 동의가 없으면 받지 않습니다 (서버에서 400)
-- 광고성 정보 수신 동의는 따로 받고, 동의 시각과 동의 문구 버전을 같이 저장합니다
-- 점검 결과는 7일, 신청 기록은 1년 뒤 매일 한 번 지웁니다 (cron)
+법률 자문이 아니라 이 도구가 지키도록 만든 운영 기준입니다. 배포하는 쪽이 자기 상황에 맞는지 직접 확인해 주세요. 동의 문구는 `worker/src/brand.ts`, 광고 규칙은 `worker/src/lead/consent.ts` 에 있습니다.
+
+| 무엇을 | 왜 | 얼마나 |
+|---|---|---|
+| 이메일 주소, 점검한 가게 이름·지역·점수 (필수 동의) | 상세 리포트 발송, 리포트 문의 응대 | 신청일부터 1년 뒤 매일 cron 이 지웁니다. 그 전에 메일 회신으로 삭제 요청 가능 |
+| 홈페이지 주소를 포함한 점검 결과 | 리포트 메일을 만들 때 다시 읽기 | 7일 뒤 지웁니다 |
+| 같은 이메일 주소로 광고 메일 (선택 동의) | 유료 서비스(대행) 안내 | 동의일부터 신청 기록을 지우는 1년까지, 거부하면 바로 멈춤 |
+
+- 개인정보 보호법 제15조 제2항: 필수 동의와 광고 동의 문구 모두 목적, 항목, 보유·이용 기간, 동의 거부권과 거부 시 불이익을 적습니다
+- 개인정보 보호법 제22조 제1항·제5항: 광고 동의는 따로 받는 선택 칸이고 처음에 체크돼 있지 않습니다. 동의하지 않아도 리포트는 똑같이 보냅니다. 필수 동의가 없으면 서버가 신청을 받지 않습니다 (400)
+- 정보통신망법 제50조 제1항: 리포트 메일의 유료 서비스 안내(문의 링크)는 광고 동의자에게만 싣습니다. 동의하지 않은 사람의 메일에는 광고가 없습니다
+- 제50조 제3항: 밤 9시부터 아침 8시(한국 시간)에는 따로 받은 동의가 없으므로, 그 시간에 신청하면 동의자에게도 광고를 빼고 보냅니다
+- 제50조 제4항·시행령: 광고가 든 메일은 제목 앞에 (광고)를 붙이고, 본문 아래에 보낸 곳 이름, 연락처, 수신 거부 링크를 넣습니다
+- 제50조 제2항·제5항·제6항: 수신 거부는 메일의 링크 한 번(`/api/unsubscribe`)으로 무료로 바로 처리되고, 같은 메일 주소의 모든 신청 기록에서 동의를 거둡니다. 메일 프로그램의 수신 거부 버튼(List-Unsubscribe)도 같이 겁니다
+- 제50조 제7항: 동의하거나 동의하지 않은 결과는 리포트 메일 아래에, 수신 거부 결과는 따로 짧은 메일로 알립니다 (메일 키가 없으면 로그에 남깁니다)
+- 제50조 제8항 (2년마다 재확인): 신청 기록을 1년 뒤 지우므로 동의가 2년을 넘기지 않습니다. 보관 기간을 늘려도 안전하도록 2년 지난 동의는 코드에서 무효로 봅니다
+- 동의 시각과 동의 문구 버전(`CONSENT_VERSION`)을 같이 저장합니다. 문구를 바꾸면 버전을 올립니다
+- 이 도구는 리포트 메일 말고는 광고 메일을 자동으로 보내지 않습니다. 운영자가 신청 기록으로 따로 광고를 보낼 때는 `consent_marketing = 1` 인 주소에만, 낮 시간에, 위 표기를 지켜 보내야 합니다
+- 메일 회신이 운영자에게 닿도록 `OWNER_EMAIL` 을 꼭 넣어 주세요 (리포트 메일의 회신 주소가 됩니다)
 - 같은 점검에 같은 메일로 다시 신청하면 메일을 다시 보내지 않습니다
 - 보호 장치: 접속자당 1분 10회, 하루 점검 상한(`DAILY_CHECK_LIMIT`), 하루 리포트 상한(`DAILY_LEAD_LIMIT`), 봇용 숨은 칸
-- 동의 문구는 `worker/src/brand.ts` 에 있습니다. 배포 전에 운영자가 법령에 맞는지 직접 확인해 주세요
 
 ## 사용자가 넣은 주소를 여는 방식 (SSRF 방지)
 
@@ -142,7 +157,7 @@ npm test                         # 단위 시험
 
 ## 확인한 것과 아직 확인하지 않은 것
 
-- 확인함: 정규화·비교·점수표·SSRF 검사 단위 시험, 로컬 시험 서버로 홈페이지 점검, `wrangler dev` 예시 모드에서 점검과 리포트 신청 흐름, 실제 공개 사이트 홈페이지 점검
+- 확인함: 정규화·비교·점수표·SSRF 검사·동의 문구·광고 수신 규칙 단위 시험, `wrangler dev` 예시 모드에서 수신 거부 링크와 처리 결과 알림(로그), 로컬 시험 서버로 홈페이지 점검, `wrangler dev` 예시 모드에서 점검과 리포트 신청 흐름, 실제 공개 사이트 홈페이지 점검
 - 확인하지 않음: 네이버·카카오 실제 API 호출 (키 발급 전, 응답 모양은 공식 문서 기준), Resend 실제 발송, 운영 배포와 cron 실행
 - 홈페이지는 서버가 내려준 HTML 만 읽습니다. 자바스크립트로 나중에 그려지는 링크·태그는 보지 못합니다
 - 네이버 지역 검색은 전화번호를 비워서 주는 경우가 많습니다. 이때 전화번호 일치는 "보완"으로 나옵니다
@@ -157,4 +172,4 @@ npm test                         # 단위 시험
 
 ## English
 
-gage-meo ("가게냥", shop cat) scores a Korean small business's online presence (0 to 100) from its name and region. It searches Naver Local Search and Kakao Local (behind adapters, with realistic mock data when keys are missing or `MOCK=1`), compares name, address and phone across the two after normalization, and checks the homepage for https, viewport, response time, title/description, Naver Search Advisor verification, sitemap/robots, Open Graph, and KakaoTalk channel, Naver TalkTalk and Naver Booking links. User-supplied URLs are fetched through an SSRF guard (http/https only, default ports, private IPs blocked after DNS-over-HTTPS resolution, max 3 re-validated redirects, timeout and size limit). The summary is shown on screen; the detailed report with fixes is emailed after required privacy consent (optional marketing consent stored separately), leads go to D1, and the operator is notified via Resend. Brand name, color and CTA are configurable for agencies. Runs on Cloudflare Workers (Hono) + D1. Real Naver/Kakao API calls are untested. MIT licensed.
+gage-meo ("가게냥", shop cat) scores a Korean small business's online presence (0 to 100) from its name and region. It searches Naver Local Search and Kakao Local (behind adapters, with realistic mock data when keys are missing or `MOCK=1`), compares name, address and phone across the two after normalization, and checks the homepage for https, viewport, response time, title/description, Naver Search Advisor verification, sitemap/robots, Open Graph, and KakaoTalk channel, Naver TalkTalk and Naver Booking links. User-supplied URLs are fetched through an SSRF guard (http/https only, default ports, private IPs blocked after DNS-over-HTTPS resolution, max 3 re-validated redirects, timeout and size limit). The summary is shown on screen; the detailed report with fixes is emailed after required privacy consent. Optional marketing consent is stored separately: the paid-service CTA is included only for consenting recipients and only between 08:00 and 21:00 KST, with a "(광고)" subject prefix, sender contact and a one-click unsubscribe link (consent results are notified by email, consent older than 2 years is treated as void). Leads go to D1, and the operator is notified via Resend. Brand name, color and CTA are configurable for agencies. Runs on Cloudflare Workers (Hono) + D1. Real Naver/Kakao API calls are untested. MIT licensed.

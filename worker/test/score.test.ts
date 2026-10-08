@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { publicView, runCheck } from "../src/core/check";
 import type { HomepageResult } from "../src/core/homepage";
 import { buildItems, CATALOG, MAX_SCORE, summarize } from "../src/core/score";
-import { reportSubject, reportText, ownerNoticeText } from "../src/lead/report";
+import { reportSubject, reportText, ownerNoticeText, withdrawNoticeText } from "../src/lead/report";
 import { mockProvider } from "../src/places/mock";
 import type { Place } from "../src/places/types";
 
@@ -131,14 +131,28 @@ describe("점검 한 번 (예시 데이터)", () => {
   it("리포트 본문", async () => {
     const r = await runCheck({ name: "모락 베이커리", region: "서울 강남구" }, { ...deps, homepage: async () => goodHome });
     const brand = { name: "Define404", url: "https://define404.com", color: "#1E6B52", ctaUrl: "https://contact.define404.com", ctaLabel: "고쳐 드립니다", privacyOwner: "Define404", suggestBookingMeo: true };
-    const t = reportText(r, brand);
+    const t = reportText(r, brand, { ad: true, marketing: true, unsubscribeUrl: "https://x.example/api/unsubscribe?t=abc", now: 0 });
     expect(t).toContain("고치는 방법:");
     expect(t).toContain("github.com/johndefine404/booking-meo");
-    expect(t).toContain("고쳐 드립니다");
+    expect(t).toContain("(광고) 고쳐 드립니다");
     expect(t).toContain("예시 데이터");
     expect(t).toContain("가게냥");
-    expect(t).toContain("https://contact.define404.com");
+    expect(t).toContain("연락처: https://contact.define404.com");
+    expect(t).toContain("1970-01-01 09:00 (한국 시간)에 Define404의 광고 메일 수신에 동의");
+    expect(t).toContain("https://x.example/api/unsubscribe?t=abc");
     expect(reportSubject(r, brand)).toContain("가게냥 점검 리포트: 모락 베이커리");
+    expect(reportSubject(r, brand, true)).toMatch(/^\(광고\) /);
+    expect(reportSubject(r, brand, false)).not.toContain("(광고)");
+
+    // 광고 수신에 동의하지 않으면 유료 서비스 안내와 수신 거부 링크가 빠진다
+    const plain = reportText(r, brand, { ad: false, marketing: false });
+    expect(plain).not.toContain("맡겨 주세요");
+    expect(plain).not.toContain("(광고)");
+    expect(plain).not.toContain("unsubscribe");
+    expect(plain).toContain("동의하지 않으셨으므로");
+    expect(plain).toContain("보낸 곳: Define404");
+    expect(withdrawNoticeText(brand, 0)).toContain("수신 거부를 처리했습니다");
+    expect(withdrawNoticeText(brand, 0)).not.toContain("맡겨");
     expect(t).not.toMatch(/\u2014/);
     expect(t).not.toMatch(/\*\*|^#/m);
     expect(ownerNoticeText(r, "a@b.co", true)).toContain("광고성 정보 수신 동의: 예");

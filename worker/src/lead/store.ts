@@ -34,6 +34,7 @@ export type LeadRow = {
   score: number;
   marketing: boolean;
   consentVersion: string;
+  unsubToken: string | null; // 광고 수신 거부 링크용 (동의한 경우만)
 };
 
 export async function leadExists(db: D1Database, checkId: string, email: string): Promise<boolean> {
@@ -45,12 +46,27 @@ export async function saveLead(db: D1Database, l: LeadRow, now = Date.now()): Pr
   if (await leadExists(db, l.checkId, l.email)) return false;
   await db
     .prepare(
-      `INSERT INTO leads (created_at, check_id, email, store_name, region, score, consent_privacy_at, consent_marketing, consent_marketing_at, consent_version)
-       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?1, ?7, ?8, ?9)`,
+      `INSERT INTO leads (created_at, check_id, email, store_name, region, score, consent_privacy_at, consent_marketing, consent_marketing_at, consent_version, unsub_token)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?1, ?7, ?8, ?9, ?10)`,
     )
-    .bind(now, l.checkId, l.email, l.storeName, l.region, l.score, l.marketing ? 1 : 0, l.marketing ? now : null, l.consentVersion)
+    .bind(now, l.checkId, l.email, l.storeName, l.region, l.score, l.marketing ? 1 : 0, l.marketing ? now : null, l.consentVersion, l.unsubToken)
     .run();
   return true;
+}
+
+// 광고 수신 거부: 링크의 토큰으로 메일 주소를 찾아 그 주소의 모든 신청 기록에서 동의를 거둔다
+// 처음 거부한 경우에만 메일 주소를 돌려준다 (처리 결과 알림용). 이미 거부했거나 없는 토큰이면 null
+export async function withdrawMarketing(db: D1Database, token: string, now = Date.now()): Promise<string | null> {
+  const row = await db
+    .prepare("SELECT email FROM leads WHERE unsub_token = ?1")
+    .bind(token)
+    .first<{ email: string }>();
+  if (!row) return null;
+  const res = await db
+    .prepare("UPDATE leads SET consent_marketing = 0, consent_marketing_at = NULL, marketing_withdrawn_at = ?2 WHERE email = ?1 AND consent_marketing = 1")
+    .bind(row.email, now)
+    .run();
+  return (res.meta?.changes ?? 0) > 0 ? row.email : null;
 }
 
 // 매일 한 번: 7일 지난 점검 결과, 1년 지난 신청 기록을 지운다
