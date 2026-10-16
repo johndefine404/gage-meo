@@ -43,4 +43,4 @@ PRIVACY_URL = ""
 
 # 매일 한 번 오래된 점검 결과(7일)와 신청 기록(1년)을 지운다
 [triggers]
-crons = ["0 18 * * *"]
+crons = [] # 정기 실행은 define404-slack 워커가 /__cron 으로 대신 부른다

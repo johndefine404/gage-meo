@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   LIMITER?: RateLimit;
+  CRON_SECRET?: string; // define404-slack 워커가 /__cron 을 부를 때 쓰는 비밀값
 
   MOCK?: string;
   // 쓰기 요청을 받아 줄 다른 출처 (쉼표 구분). 비우면 이 사이트 자신의 주소만 받는다
