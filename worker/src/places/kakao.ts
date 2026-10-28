@@ -1,6 +1,6 @@
 // 카카오 로컬 API: 키워드로 장소 검색 어댑터
 // 문서: https://developers.kakao.com/docs/latest/ko/local/dev-guide#search-by-keyword
-// 주의: 실제 키로 호출해 본 적 없음 (키 발급 전). 응답 모양은 공식 문서 기준
+// 2026-10-28 실제 키로 호출해 응답 모양 확인. 한 번에 15곳까지 받아 체인 지점 후보를 넓힌다
 import { queryText, type Place, type PlaceProvider } from "./types";
 
 type KakaoDoc = {
@@ -17,7 +17,7 @@ export function kakaoProvider(restKey: string, fetchImpl: typeof fetch = fetch):
     source: "kakao",
     mock: false,
     async search(q) {
-      const url = `https://dapi.kakao.com/v2/local/search/keyword.json?size=5&query=${encodeURIComponent(queryText(q))}`;
+      const url = `https://dapi.kakao.com/v2/local/search/keyword.json?size=15&query=${encodeURIComponent(queryText(q))}`;
       const res = await fetchImpl(url, {
         headers: { Authorization: `KakaoAK ${restKey}` },
         signal: AbortSignal.timeout(6000),

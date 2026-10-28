@@ -127,6 +127,23 @@ describe("점검 한 번 (예시 데이터)", () => {
     const r = await runCheck({ name: "없는 가게", region: "서울" }, { ...deps, homepage: async () => goodHome });
     expect(r.items.find((i) => i.id === "naver_found")?.status).toBe("fail");
     expect(r.items.find((i) => i.id === "kakao_found")?.status).toBe("fail");
+    expect(r.notFound).toEqual({ candidates: [] });
+  });
+
+  it("지역을 붙여 못 찾으면 이름만으로 한 번 더 찾는다", async () => {
+    const calls: string[] = [];
+    const prov = (source: "naver" | "kakao") => ({
+      source,
+      mock: false,
+      async search(q: { name: string; region: string }) {
+        calls.push(`${source}:${q.region}`);
+        return q.region ? [] : [place({ source, name: "스타벅스 선릉역점", roadAddress: "서울특별시 강남구 테헤란로 334" })];
+      },
+    });
+    const r = await runCheck({ name: "스타벅스 선릉역점", region: "서울 강남구" }, { naver: prov("naver"), kakao: prov("kakao"), homepage: async () => goodHome });
+    expect(calls.sort()).toEqual(["kakao:", "kakao:서울 강남구", "naver:", "naver:서울 강남구"]);
+    expect(r.items.find((i) => i.id === "naver_found")?.status).toBe("pass");
+    expect(r.notFound).toBeNull();
   });
 
   it("리포트 본문", async () => {

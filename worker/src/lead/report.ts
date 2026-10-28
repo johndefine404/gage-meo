@@ -53,6 +53,11 @@ export function reportText(r: CheckResult, b: Brand, o: MailOpts = { ad: false, 
     lines.push(`■ (광고) ${b.ctaLabel}`, "");
     lines.push(`직접 고치기 어려우면 ${b.name}에 맡겨 주세요. 지도 정보 정리, 홈페이지 수정, 상담 창구 연결을 대신 해 드립니다.`);
     lines.push(b.ctaUrl, "");
+    if (b.socials?.length) {
+      lines.push("사장님이 알면 좋은 AI·지도 정보를 매주 올려요.");
+      for (const s of b.socials) lines.push(`${s.label}: ${s.url}`);
+      lines.push("");
+    }
   }
   lines.push("---");
   lines.push(`이 메일은 가게냥(우리 가게 온라인 점검) 화면에서 리포트를 신청하셔서 보내 드렸습니다.`);

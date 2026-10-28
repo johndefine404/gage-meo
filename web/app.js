@@ -29,6 +29,10 @@
       document.querySelectorAll("[data-brand-link]").forEach((e) => (e.href = b.url));
       document.querySelectorAll("[data-cta-link]").forEach((e) => (e.href = b.ctaUrl));
       document.querySelectorAll("[data-cta-label]").forEach((e) => (e.textContent = b.ctaLabel));
+      if (Array.isArray(b.socials) && b.socials.length) {
+        $("#socialLinks").replaceChildren(...b.socials.map((s) => Object.assign(el("a", null, s.label), { href: s.url, rel: "noopener", target: "_blank" })));
+        $("#socials").hidden = false;
+      }
       for (const [id, list] of [["privacyText", cfg.consent.privacy], ["marketingText", cfg.consent.marketing]]) {
         const ul = document.getElementById(id);
         ul.replaceChildren(...list.map((t) => el("li", null, t)));
@@ -55,8 +59,11 @@
     }
     btn.disabled = true;
     btn.textContent = "점검하는 중 (최대 20초)";
+    $("#notFound").hidden = true;
     try {
-      render(await post("/api/check", body));
+      const r = await post("/api/check", body);
+      if (r.notFound) showNotFound(r);
+      else render(r);
     } catch (err) {
       $("#checkErr").textContent = err.message;
     } finally {
@@ -64,6 +71,34 @@
       btn.textContent = "점검하기";
     }
   });
+
+  // 두 지도 모두에서 못 찾았을 때: 점수 대신 비슷한 이름 후보를 먼저 보여 준다
+  function showNotFound(r) {
+    $("#result").hidden = true;
+    const list = r.notFound.candidates || [];
+    $("#nfSub").hidden = !list.length;
+    $("#nfList").replaceChildren(
+      ...list.map((c) => {
+        const b = el("button");
+        b.type = "button";
+        b.append(el("b", null, c.name), el("span", null, c.address));
+        b.addEventListener("click", () => {
+          const f = $("#checkForm");
+          f.elements.namedItem("name").value = c.name;
+          f.requestSubmit();
+        });
+        const li = el("li");
+        li.append(b);
+        return li;
+      }),
+    );
+    $("#nfShow").onclick = () => {
+      $("#notFound").hidden = true;
+      render(r);
+    };
+    $("#notFound").hidden = false;
+    $("#notFound").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
 
   function render(r) {
     checkId = r.id;

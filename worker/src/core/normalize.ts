@@ -124,25 +124,96 @@ export function compareName(a: string, b: string): Level {
 
 // ---------- 검색 결과 중 입력한 가게 고르기 ----------
 
-// 이름이 같거나 한쪽이 다른 쪽을 품을 때만 같은 가게로 본다. 지역 낱말이 주소에 있으면 가산
-export function pickPlace(places: Place[], name: string, region: string): Place | null {
-  const want = normalizeName(name);
-  const regionTokens = region
+// 체인 지점 이름: 사용자가 브랜드를 줄여 쓰거나("이디야", "메가커피") 지도가 늘여 쓴("이디야커피", "메가MGC커피") 경우를 잡는다.
+// 낱말이 둘 이상이고 마지막 낱말이 "~점"이면 지점명은 그대로 들어 있어야 하고, 앞 낱말은 글자 순서대로만 들어 있으면 된다
+const isSubsequence = (needle: string, hay: string) => {
+  let j = 0;
+  for (const ch of hay) if (ch === needle[j]) j++;
+  return j === needle.length;
+};
+
+export function nameMatch(candidate: string, input: string): Level {
+  const level = compareName(candidate, input);
+  if (level !== "different") return level;
+  const tokens = String(input ?? "").split(/\s+/).map(normalizeName).filter(Boolean);
+  if (tokens.length < 2) return level;
+  const cand = normalizeName(candidate);
+  const branch = tokens[tokens.length - 1];
+  const brand = tokens.slice(0, -1);
+  if (!/.점$/.test(branch) || !cand.includes(branch)) return level;
+  if (brand.every((t) => t.length >= 2 && (cand.includes(t) || isSubsequence(t, cand)))) return "near";
+  return level;
+}
+
+const regionTokensOf = (region: string) =>
+  region
     .split(/\s+/)
     .filter(Boolean)
     .map((t, i) => (i === 0 ? normalizeSido(t) : t));
+
+const regionHits = (p: Place, tokens: string[]) => {
+  const addr = `${normalizeAddress(p.roadAddress)} ${normalizeAddress(p.address)}`;
+  return tokens.filter((t) => addr.includes(t)).length;
+};
+
+// 이름이 같거나 한쪽이 다른 쪽을 품을 때(체인 지점은 위 규칙)만 같은 가게로 본다. 지역 낱말이 주소에 있으면 가산.
+// requireRegion: 지역을 빼고 다시 검색한 결과에서 고를 때, 지역 낱말이 하나도 맞지 않는 다른 동네 가게는 고르지 않는다
+export function pickPlace(places: Place[], name: string, region: string, opts: { requireRegion?: boolean } = {}): Place | null {
+  const want = normalizeName(name);
+  const regionTokens = regionTokensOf(region);
   let best: Place | null = null;
   let bestScore = 0;
   for (const p of places) {
-    const level = compareName(p.name, name);
+    const level = nameMatch(p.name, name);
     let s = level === "same" ? 10 : level === "near" ? 5 : 0;
     if (!s || !want) continue;
-    const addr = `${normalizeAddress(p.roadAddress)} ${normalizeAddress(p.address)}`;
-    for (const t of regionTokens) if (addr.includes(t)) s += 1;
+    const hits = regionHits(p, regionTokens);
+    if (opts.requireRegion && regionTokens.length && !hits) continue;
+    s += hits;
     if (s > bestScore) {
       bestScore = s;
       best = p;
     }
   }
   return best;
+}
+
+// ---------- 못 찾았을 때 보여 줄 후보 ----------
+
+const bigrams = (s: string) => {
+  const out = new Set<string>();
+  for (let i = 0; i < s.length - 1; i++) out.add(s.slice(i, i + 2));
+  if (s.length === 1) out.add(s);
+  return out;
+};
+
+// 두 이름이 얼마나 닮았는지 0~1 (두 글자 묶음 겹침)
+export function nameSimilarity(a: string, b: string): number {
+  const x = bigrams(normalizeName(a));
+  const y = bigrams(normalizeName(b));
+  if (!x.size || !y.size) return 0;
+  let both = 0;
+  for (const g of x) if (y.has(g)) both++;
+  return (2 * both) / (x.size + y.size);
+}
+
+export type Candidate = { name: string; address: string };
+
+// 검색 결과를 이름이 닮은 순, 지역이 맞는 순으로 줄 세워 최대 limit 곳. 같은 가게(이름+주소)는 한 번만
+export function rankCandidates(places: Place[], name: string, region: string, limit = 5): Candidate[] {
+  const tokens = regionTokensOf(region);
+  const seen = new Set<string>();
+  return places
+    .filter((p) => p.name && (p.roadAddress || p.address))
+    .map((p) => ({ p, sim: nameSimilarity(p.name, name), hits: regionHits(p, tokens) }))
+    .filter((c) => c.sim > 0)
+    .sort((a, b) => b.sim + b.hits * 0.1 - (a.sim + a.hits * 0.1))
+    .filter(({ p }) => {
+      const key = normalizeName(p.name) + "|" + addressCore(p.roadAddress || p.address);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, limit)
+    .map(({ p }) => ({ name: p.name, address: p.roadAddress || p.address }));
 }

@@ -11,10 +11,18 @@ export type Brand = {
   privacyOwner: string; // 개인정보를 받는 쪽 (동의 문구에 들어간다)
   suggestBookingMeo: boolean;
   privacyUrl: string; // 개인정보 처리방침 주소
+  socials: { label: string; url: string }[]; // 소식 받는 곳(인스타·쓰레드). 대행사 배포는 BRAND_SOCIALS 로 바꾸거나 비운다
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const safeUrl = (u: string | undefined) => (u && /^https?:\/\//.test(u) ? u : undefined);
+
+// "인스타그램|https://...,쓰레드|https://..." 형식. 이름만 바꾼 대행사 배포에는 기본값(Define404 계정)을 싣지 않는다
+function socials(env: Env, d: Brand): Brand["socials"] {
+  if (env.BRAND_SOCIALS !== undefined)
+    return env.BRAND_SOCIALS.split(",").map((s) => s.split("|")).filter(([l, u]) => l && safeUrl(u)).map(([l, u]) => ({ label: l.trim(), url: u.trim() }));
+  return env.BRAND_NAME ? [] : (d.socials ?? []);
+}
 
 export function brand(env: Env): Brand {
   const d = defaults as Brand;
@@ -27,6 +35,7 @@ export function brand(env: Env): Brand {
     ctaLabel: env.CTA_LABEL || d.ctaLabel,
     privacyOwner: env.PRIVACY_OWNER || env.BRAND_NAME || d.privacyOwner,
     privacyUrl: safeUrl(env.PRIVACY_URL) ?? d.privacyUrl,
+    socials: socials(env, d),
     suggestBookingMeo: env.SUGGEST_BOOKING_MEO ? env.SUGGEST_BOOKING_MEO === "1" || env.SUGGEST_BOOKING_MEO === "true" : d.suggestBookingMeo,
   };
 }

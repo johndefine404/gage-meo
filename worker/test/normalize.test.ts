@@ -1,3 +1,4 @@
+import { fromKakao } from "../src/places/kakao";
 import { describe, expect, it } from "vitest";
 import {
   addressCore,
@@ -8,6 +9,8 @@ import {
   normalizeName,
   normalizePhone,
   pickPlace,
+  nameMatch,
+  rankCandidates,
 } from "../src/core/normalize";
 import { fromNaver, stripTags } from "../src/places/naver";
 import { mockPlaces } from "../src/places/mock";
@@ -88,6 +91,33 @@ describe("가게 이름", () => {
     expect(pickPlace(list, "모락베이커리", "서울 강남구")?.roadAddress).toBe("서울특별시 강남구 역삼로 12");
     expect(pickPlace(list, "없는가게", "서울")).toBeNull();
     expect(pickPlace([], "모락", "서울")).toBeNull();
+  });
+});
+
+describe("체인 지점과 후보", () => {
+  const np = (title: string, roadAddress: string) =>
+    fromNaver({ title, link: "", category: "", description: "", telephone: "", address: "", roadAddress });
+  it("브랜드를 줄여 쓴 체인 지점도 같은 가게로 본다", () => {
+    expect(nameMatch("이디야커피 역삼중앙점", "이디야 역삼중앙점")).toBe("near");
+    expect(nameMatch("메가MGC커피 강남역점", "메가커피 강남역점")).toBe("near");
+    expect(nameMatch("스타벅스 강남R점", "스타벅스 강남역점")).toBe("different");
+    expect(nameMatch("이디야커피 역삼중앙점", "이디야커피 역삼역점")).toBe("different");
+    expect(nameMatch("모락베이커리", "모락 빵집")).toBe("different");
+  });
+  it("지역을 빼고 다시 찾은 결과에서는 지역이 맞는 곳만 고른다", () => {
+    const list = [np("우래옥", "강원특별자치도 강릉시 하평1길 8"), np("우래옥", "서울특별시 중구 창경궁로 62-29")];
+    expect(pickPlace(list, "우래옥", "서울 중구", { requireRegion: true })?.roadAddress).toBe("서울특별시 중구 창경궁로 62-29");
+    expect(pickPlace([list[0]], "우래옥", "서울 중구", { requireRegion: true })).toBeNull();
+  });
+  it("후보는 이름이 닮고 지역이 맞는 순, 같은 가게는 한 번만", () => {
+    const list = [
+      np("다른 빵집", "서울특별시 강남구 역삼로 10"),
+      np("스타벅스 강남R점", "서울특별시 강남구 강남대로 390 (역삼동)"),
+      fromKakao({ place_name: "스타벅스 강남R점", category_name: "", phone: "", address_name: "", road_address_name: "서울 강남구 강남대로 390", place_url: "" }),
+      np("스타벅스 강남역우송빌딩점", "서울특별시 서초구 서초대로73길 7 (서초동)"),
+    ];
+    const c = rankCandidates(list, "스타벅스 강남역점", "서울 강남구");
+    expect(c.map((x) => x.name)).toEqual(["스타벅스 강남R점", "스타벅스 강남역우송빌딩점"]);
   });
 });
 

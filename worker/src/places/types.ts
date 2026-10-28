@@ -14,8 +14,11 @@ export type Place = {
 
 export type PlaceQuery = { name: string; region: string };
 
-// 실제 API에 보내는 검색어: "지역 가게이름"
-export const queryText = (q: PlaceQuery) => `${q.region} ${q.name}`.trim();
+// 검색어로 보낼 가게 이름: 괄호 속 참고 글귀를 빼고 공백을 하나로. 다 지워지면 원래 이름
+export const searchName = (name: string) => name.replace(/[(（\[][^)）\]]*[)）\]]/g, " ").replace(/\s+/g, " ").trim() || name.trim();
+
+// 실제 API에 보내는 검색어: "지역 가게이름" (지역을 비우면 가게 이름만)
+export const queryText = (q: PlaceQuery) => `${q.region} ${searchName(q.name)}`.trim();
 
 export interface PlaceProvider {
   source: Source;

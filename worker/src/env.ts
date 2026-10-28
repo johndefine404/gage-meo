@@ -27,6 +27,7 @@ export interface Env {
 
   // 브랜드 덮어쓰기 (대행사용). 비우면 brand.json 값을 쓴다
   BRAND_NAME?: string;
+  BRAND_SOCIALS?: string;
   BRAND_COLOR?: string;
   BRAND_URL?: string;
   CTA_URL?: string;
