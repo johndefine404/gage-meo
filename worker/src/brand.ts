@@ -12,6 +12,7 @@ export type Brand = {
   suggestBookingMeo: boolean;
   privacyUrl: string; // 개인정보 처리방침 주소
   socials: { label: string; url: string }[]; // 소식 받는 곳(인스타·쓰레드). 대행사 배포는 BRAND_SOCIALS 로 바꾸거나 비운다
+  kakaoChannel: string; // 카카오톡 채널 친구 추가 주소. 빈 값이면 버튼을 숨긴다. 대행사 배포는 BRAND_KAKAO 로 바꾸거나 비운다
 };
 
 const HEX = /^#[0-9a-fA-F]{6}$/;
@@ -36,6 +37,7 @@ export function brand(env: Env): Brand {
     privacyOwner: env.PRIVACY_OWNER || env.BRAND_NAME || d.privacyOwner,
     privacyUrl: safeUrl(env.PRIVACY_URL) ?? d.privacyUrl,
     socials: socials(env, d),
+    kakaoChannel: env.BRAND_KAKAO !== undefined ? (safeUrl(env.BRAND_KAKAO.trim()) ?? "") : env.BRAND_NAME ? "" : (d.kakaoChannel ?? ""),
     suggestBookingMeo: env.SUGGEST_BOOKING_MEO ? env.SUGGEST_BOOKING_MEO === "1" || env.SUGGEST_BOOKING_MEO === "true" : d.suggestBookingMeo,
   };
 }

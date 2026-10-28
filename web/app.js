@@ -33,6 +33,10 @@
         $("#socialLinks").replaceChildren(...b.socials.map((s) => Object.assign(el("a", null, s.label), { href: s.url, rel: "noopener", target: "_blank" })));
         $("#socials").hidden = false;
       }
+      if (/^https:\/\//.test(b.kakaoChannel || "")) {
+        $("#kakaoLink").href = b.kakaoChannel;
+        $("#kakao").hidden = false;
+      }
       for (const [id, list] of [["privacyText", cfg.consent.privacy], ["marketingText", cfg.consent.marketing]]) {
         const ul = document.getElementById(id);
         ul.replaceChildren(...list.map((t) => el("li", null, t)));
@@ -169,6 +173,10 @@
       $("#leadErr").textContent = err.message;
       btn.disabled = false;
     }
+  });
+
+  $("#kakaoLink").addEventListener("click", () => {
+    if (typeof window.pulse === "function") window.pulse("kakao_channel_add");
   });
 
   $("#again").addEventListener("click", () => {

@@ -106,6 +106,9 @@ details ul{margin:6px 0 0;padding-left:18px}
 .cta p b{color:#fff}
 .cta-k{margin:0 !important;font-size:13px !important;font-weight:700;color:#9FD3BC !important}
 .cta .btn.ghost{color:#fff;border-color:#fff}
+.kakao{margin-top:22px;padding-top:18px;border-top:1px solid #3A4440}
+.kakao p{margin:0 0 12px;word-break:keep-all}
+.btn.kakao-btn{background:#FEE500;color:#191919}
 .meo{margin-top:22px;padding-top:18px;border-top:1px solid #3A4440}
 .meo a{color:#9FD3BC;font-weight:700}
 .again{margin:24px 0 0;font-size:14px}

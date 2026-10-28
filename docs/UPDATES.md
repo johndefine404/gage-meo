@@ -1,5 +1,13 @@
 # 업데이트 내역
 
+## 2026-10-29
+
+- 점검 결과 화면의 "고쳐 드립니다" 상자 안, 문의하기 버튼 아래에 카카오톡 채널(디파인404) 친구 추가 버튼을 넣고 운영에 배포했다(캡틴 지시). 버튼 위 문구는 "점검 결과가 바뀌거나 새 조사가 나오면 카톡으로 알려 드려요.", 버튼은 카카오 노란색(#FEE500, 글자 #191919)으로 https://pf.kakao.com/_rYtmX/friend 를 새 탭으로 연다. 누르면 기존 방문 신호(pulse.js)로 전환 이름 kakao_channel_add 를 보낸다. 주소는 brand.json kakaoChannel 에 두고, 대행사 배포(BRAND_NAME 지정)에는 기본 채널을 싣지 않으며 BRAND_KAKAO 로 바꾸거나 비울 수 있다(빈 값이면 버튼 숨김).
+  - worker/brand.json, worker/src/brand.ts, worker/src/env.ts, web/index.html(자산 캐시 ?v=20261029), web/app.js, web/style.css
+  - 타입 검사 통과, 단위 시험 124개 통과. 로컬 wrangler dev 에서 운영 API의 실제 점검 결과("을지면옥 / 서울 중구", 50점)로 1440·390 렌더 확인, 가로 넘침 0
+  - 운영 배포: npx wrangler deploy --config wrangler.prod.toml, 버전 9c88df4c. gage.define404.com 에서 같은 가게로 결과 화면을 띄워 1440·390 모두 버튼 표시, 링크·새 탭·색 확인
+  - 버튼 클릭 시 전환 신호가 실제로 집계되는지는 확인하지 않았다(운영 집계에 시험 클릭이 섞이지 않게 누르지 않음). 커밋·푸시 안 함
+
 ## 2026-10-28 (3)
 
 - 지점 이름 검색 보완을 운영에 배포했다(캡틴 승인). npx wrangler deploy --config wrangler.prod.toml, 버전 e3a16142
